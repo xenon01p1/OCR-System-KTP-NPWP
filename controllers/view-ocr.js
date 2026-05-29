@@ -1,6 +1,6 @@
 // Place this file in your frontend controllers/ folder and load it after jQuery/SweetAlert.
 // API base assumes Flask runs on http://127.0.0.1:8088.
-const OCR_API_BASE = 'http://127.0.0.1:8088/api';
+const OCR_API_BASE = 'http://127.0.0.1:8060/api';
 
 function bindOcrPageEvents() {
     const $form = $('#ocr-upload-form');
@@ -105,21 +105,49 @@ function loadOcrFiles() {
         $tbody.empty();
 
         if (!rows.length) {
-            $tbody.append(`<tr><td colspan="4" class="px-6 py-4 text-center text-slate-400">No OCR data yet.</td></tr>`);
+            $tbody.append(`<tr><td colspan="5" class="px-6 py-4 text-center text-slate-400">No OCR data yet.</td></tr>`);
             return;
         }
 
         rows.forEach(row => {
             const engine = row.ocr_engine || 'hybrid-field-merge';
-            const fileUrl = `http://127.0.0.1:8088/${row.filepath}`;
+            const fileUrl = `http://127.0.0.1:8060/${row.filepath}`;
+            const payload = row.json_payload || {};
+            const score = payload.score || 0;
+            const accuracy = score ? Math.min(score * 10, 100) : 0;
+
             $tbody.append(`
                 <tr data-id="${row.id}">
-                    <td class="px-6 py-4"><span class="bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-md text-xs font-semibold">${engine}</span></td>
-                    <td class="px-6 py-4"><a href="${fileUrl}" target="_blank" class="text-indigo-600 hover:underline font-semibold"><i class="fa-regular fa-file mr-1.5"></i>${row.filename}</a></td>
+                    <td class="px-6 py-4">
+                        <span class="bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-md text-xs font-semibold">
+                            ${engine}
+                        </span>
+                    </td>
+
+                    <td class="px-6 py-4">
+                        <a href="${fileUrl}" target="_blank" class="text-indigo-600 hover:underline font-semibold">
+                            <i class="fa-regular fa-file mr-1.5"></i>${row.filename}
+                        </a>
+                    </td>
+
+                    <td class="px-6 py-4">
+                        <div class="flex items-center space-x-2 w-32">
+                            <span class="font-semibold text-slate-900 text-xs">${accuracy}%</span>
+                            <div class="w-full bg-slate-100 rounded-full h-1.5">
+                                <div class="bg-indigo-600 h-1.5 rounded-full" style="width: ${accuracy}%"></div>
+                            </div>
+                        </div>
+                    </td>
+
                     <td class="px-6 py-4">${statusBadge(row.status)}</td>
+
                     <td class="px-6 py-4 text-right space-x-2">
-                        <button class="btn-detail text-slate-400 hover:text-indigo-600 p-1" data-id="${row.id}"><i class="fa-regular fa-eye text-base"></i></button>
-                        <button class="btn-delete text-slate-400 hover:text-rose-600 p-1" data-id="${row.id}"><i class="fa-regular fa-trash-can text-base"></i></button>
+                        <button class="btn-detail text-slate-400 hover:text-indigo-600 p-1" data-id="${row.id}">
+                            <i class="fa-regular fa-eye text-base"></i>
+                        </button>
+                        <button class="btn-delete text-slate-400 hover:text-rose-600 p-1" data-id="${row.id}">
+                            <i class="fa-regular fa-trash-can text-base"></i>
+                        </button>
                     </td>
                 </tr>
             `);
