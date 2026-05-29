@@ -8,6 +8,7 @@
         </button>
     </div>
 
+    <!-- tab upload -->
     <div id="tab-upload" class="tab-content active mt-4">
         <div class="max-w-2xl bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
             <form id="ocr-upload-form" class="space-y-6">
@@ -52,6 +53,7 @@
         </div>
     </div>
 
+    <!-- tab data -->
     <div id="tab-data" class="tab-content mt-4 hidden">
         <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <div class="overflow-x-auto">
@@ -60,6 +62,7 @@
                         <tr class="bg-slate-50 border-b border-slate-200 text-slate-400 text-xs font-semibold uppercase tracking-wider">
                             <th class="px-6 py-4">Library Used</th>
                             <th class="px-6 py-4">File Name</th>
+                            <th class="px-6 py-4">Accuracy</th>
                             <th class="px-6 py-4">Status</th>
                             <th class="px-6 py-4 text-right">Action</th>
                         </tr>
@@ -68,6 +71,14 @@
                         <tr>
                             <td class="px-6 py-4"><span class="bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-md text-xs font-semibold">Tesseract OCR</span></td>
                             <td class="px-6 py-4"><a href="#" class="text-indigo-600 hover:underline font-semibold open-file-mock" data-filename="invoice_2024_01.pdf"><i class="fa-regular fa-file-pdf mr-1.5"></i>invoice_2024_01.pdf</a></td>
+                            <td class="px-6 py-4">
+                                <div class="flex items-center space-x-2 w-32">
+                                    <span class="font-semibold text-slate-900 text-xs">94.2%</span>
+                                    <div class="w-full bg-slate-100 rounded-full h-1.5">
+                                        <div class="bg-indigo-600 h-1.5 rounded-full" style="width: 94.2%"></div>
+                                    </div>
+                                </div>
+                            </td>
                             <td class="px-6 py-4"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700"><span class="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5"></span>Success</span></td>
                             <td class="px-6 py-4 text-right space-x-2">
                                 <button class="btn-detail text-slate-400 hover:text-indigo-600 p-1"><i class="fa-regular fa-eye text-base"></i></button>

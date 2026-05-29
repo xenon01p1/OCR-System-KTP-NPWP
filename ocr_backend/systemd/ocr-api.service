@@ -1,0 +1,15 @@
+[Unit]
+Description=OCR Flask API
+After=network.target mysql.service
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/html/OCR_shortproject
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/var/www/html/OCR_shortproject/venv/bin/python /var/www/html/OCR_shortproject/run_api.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
