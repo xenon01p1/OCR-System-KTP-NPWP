@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCR Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* Inner tab styling overrides */
+        .tab-content.hidden { display: none !important; }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800 antialiased overflow-hidden">
+
+    <div class="flex h-screen w-full">
+        
+        <div id="sidebar-container"></div>
+
+        <main class="flex-1 flex flex-col h-full min-w-0">
+            
+            <div id="header-container"></div>
+
+            <div id="main-view-container" class="flex-1 overflow-y-auto p-8 max-w-7xl w-full mx-auto">
+                </div>
+        </main>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            
+            // 1. INITIAL STRUCTURAL LOADS
+            $('#sidebar-container').load('components/sidebar.html');
+            $('#header-container').load('components/header.html');
+            
+            // Primary Default Route: Home View
+            loadView('home');
+
+            // 2. PRIMARY VIEW ROUTER SWITCH
+            function loadView(viewName) {
+                if(viewName === 'home') {
+                    $('#main-view-container').load('components/view-home.html', function() {
+                        $('#page-title').text('Dashboard Home');
+                    });
+                } else if(viewName === 'ocr') {
+                    $('#main-view-container').load('components/view-ocr.html', function() {
+                        $('#page-title').text('OCR Engine Portal');
+                    });
+                }
+            }
+
+            // 3. NAVIGATION LINKS DELEGATION ACTION
+            $(document).on('click', '#nav-home', function(e) {
+                e.preventDefault();
+                loadView('home');
+                updateActiveSidebarStyle($(this));
+            });
+
+            $(document).on('click', '#nav-ocr', function(e) {
+                e.preventDefault();
+                loadView('ocr');
+                updateActiveSidebarStyle($(this));
+            });
+
+            function updateActiveSidebarStyle(activeElement) {
+                $('aside nav a').removeClass('bg-slate-800 text-white shadow-sm').addClass('text-slate-400 hover:bg-slate-800 hover:text-white');
+                activeElement.addClass('bg-slate-800 text-white shadow-sm').removeClass('text-slate-400 hover:bg-slate-800 hover:text-white');
+            }
+
+            // 4. INNER OCR VIEW TABS CONTROLS (Delegated)
+            $(document).on('click', '#tab-upload-btn', function() {
+                toggleInnerTabs($(this), '#tab-upload', '#tab-data');
+            });
+
+            $(document).on('click', '#tab-data-btn', function() {
+                toggleInnerTabs($(this), '#tab-data', '#tab-upload');
+            });
+
+            function toggleInnerTabs(activeBtn, showTargetId, hideTargetId) {
+                $('.ocr-tab-btn').removeClass('border-indigo-600 text-indigo-600').addClass('border-transparent text-slate-400 hover:text-slate-600');
+                activeBtn.addClass('border-indigo-600 text-indigo-600').removeClass('border-transparent text-slate-400');
+                
+                $(hideTargetId).addClass('hidden');
+                $(showTargetId).removeClass('hidden');
+            }
+
+            // 5. FILE SELECTION FEEDBACK (Delegated)
+            $(document).on('change', '#file-input', function() {
+                const files = this.files;
+                const container = $('#preview-container');
+                container.empty();
+                
+                if (files.length > 0) {
+                    $('#file-list-preview').removeClass('hidden');
+                    Array.from(files).forEach(file => {
+                        container.append(`
+                            <div class="flex items-center text-xs text-slate-600 bg-slate-100 rounded-lg p-2 max-w-md">
+                                <i class="fa-solid fa-paperclip text-indigo-500 mr-2"></i>
+                                <span class="font-medium truncate">${file.name}</span>
+                            </div>`);
+                    });
+                } else {
+                    $('#file-list-preview').addClass('hidden');
+                }
+            });
+
+            // 6. FORM PROCESSING SUBMISSION (Delegated)
+            $(document).on('submit', '#ocr-upload-form', function(e) {
+                e.preventDefault();
+                const library = $('#ocr-library').val();
+                const fileInput = $('#file-input')[0];
+                
+                if (fileInput.files.length === 0) {
+                    Swal.fire({ icon: 'warning', title: 'No Files Selected', confirmButtonColor: '#4f46e5' });
+                    return;
+                }
+
+                Swal.fire({ title: 'Processing OCR Engine...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+
+                setTimeout(() => {
+                    Array.from(fileInput.files).forEach(file => {
+                        const badgeColor = library.includes('Tesseract') ? 'bg-indigo-50 text-indigo-700' : 'bg-sky-50 text-sky-700';
+                        const newRow = `
+                            <tr>
+                                <td class="px-6 py-4"><span class="${badgeColor} px-2.5 py-1 rounded-md text-xs font-semibold">${library}</span></td>
+                                <td class="px-6 py-4"><a href="#" class="text-indigo-600 hover:underline font-semibold open-file-mock" data-filename="${file.name}"><i class="fa-regular fa-file-lines mr-1.5"></i>${file.name}</a></td>
+                                <td class="px-6 py-4"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700"><span class="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5"></span>Success</span></td>
+                                <td class="px-6 py-4 text-right space-x-2">
+                                    <button class="btn-detail text-slate-400 hover:text-indigo-600 p-1"><i class="fa-regular fa-eye text-base"></i></button>
+                                    <button class="btn-delete text-slate-400 hover:text-rose-600 p-1"><i class="fa-regular fa-trash-can text-base"></i></button>
+                                </td>
+                            </tr>`;
+                        $('#data-table-body').prepend(newRow);
+                    });
+
+                    $('#ocr-upload-form')[0].reset();
+                    $('#file-list-preview').addClass('hidden');
+                    
+                    Swal.fire({ icon: 'success', title: 'OCR Complete!', confirmButtonColor: '#4f46e5' }).then(() => {
+                        toggleInnerTabs($('#tab-data-btn'), '#tab-data', '#tab-upload');
+                    });
+                }, 1200);
+            });
+
+            // 7. DATA ENTRY ACTIONS (Delegated)
+            $(document).on('click', '.open-file-mock', function(e) {
+                e.preventDefault();
+                Swal.fire({ title: 'Opening Document', text: $(this).data('filename'), icon: 'info', confirmButtonColor: '#4f46e5' });
+            });
+
+            $(document).on('click', '.btn-detail', function() {
+                Swal.fire({ title: 'Analysis Metadata', text: 'Processing Performance: 98.4% Accuracy', icon: 'success', confirmButtonColor: '#4f46e5' });
+            });
+
+            $(document).on('click', '.btn-delete', function() {
+                $(this).closest('tr').remove();
+            });
+
+            $(document).on('click', '#btn-logout', function() {
+                Swal.fire({ title: 'Sign Out Confirmation', text: 'Exit secure dashboard session?', icon: 'question', showCancelButton: true, confirmButtonColor: '#4f46e5' });
+            });
+        });
+    </script>
+</body>
+</html>

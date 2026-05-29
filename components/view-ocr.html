@@ -1,0 +1,82 @@
+<div class="space-y-6">
+    <div class="border-b border-slate-200 flex space-x-6">
+        <button id="tab-upload-btn" class="ocr-tab-btn pb-4 text-sm font-semibold border-b-2 border-indigo-600 text-indigo-600 transition-all">
+            <i class="fa-solid fa-cloud-arrow-up mr-2"></i>Upload Files
+        </button>
+        <button id="tab-data-btn" class="ocr-tab-btn pb-4 text-sm font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-600 transition-all">
+            <i class="fa-solid fa-database mr-2"></i>Processed Data
+        </button>
+    </div>
+
+    <div id="tab-upload" class="tab-content active mt-4">
+        <div class="max-w-2xl bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+            <form id="ocr-upload-form" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Select OCR Library</label>
+                    <div class="relative">
+                        <select id="ocr-library" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-700 font-medium focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 appearance-none transition-all">
+                            <option value="Tesseract OCR">Tesseract OCR (Open Source)</option>
+                            <option value="Google Vision API">Google Cloud Vision API</option>
+                            <option value="AWS Textract">AWS Textract</option>
+                            <option value="PaddleOCR">PaddleOCR (Multilingual)</option>
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
+                            <i class="fa-solid fa-chevron-down text-sm"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Upload Documents</label>
+                    <div class="border-2 border-dashed border-slate-200 hover:border-indigo-500 rounded-2xl p-8 text-center bg-slate-50/50 hover:bg-slate-50 transition-all cursor-pointer relative group">
+                        <input type="file" id="file-input" multiple class="absolute inset-0 opacity-0 cursor-pointer" accept="image/*,.pdf">
+                        <div class="space-y-2">
+                            <div class="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center mx-auto text-slate-400 group-hover:text-indigo-500 transition-colors">
+                                <i class="fa-solid fa-file-arrow-up text-xl"></i>
+                            </div>
+                            <p class="text-sm font-semibold text-slate-700">Drag & drop files here, or <span class="text-indigo-600">browse</span></p>
+                            <p class="text-xs text-slate-400">Supports PDF, PNG, JPEG up to 10MB each</p>
+                        </div>
+                    </div>
+                    <div id="file-list-preview" class="mt-4 space-y-2 hidden">
+                        <p class="text-xs font-semibold text-slate-500 tracking-wider uppercase">Selected Files:</p>
+                        <div id="preview-container" class="space-y-1"></div>
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3.5 px-4 rounded-xl shadow-lg shadow-indigo-600/15 transition-all flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-bolt"></i>
+                    <span>Run Engine Process</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="tab-data" class="tab-content mt-4 hidden">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200 text-slate-400 text-xs font-semibold uppercase tracking-wider">
+                            <th class="px-6 py-4">Library Used</th>
+                            <th class="px-6 py-4">File Name</th>
+                            <th class="px-6 py-4">Status</th>
+                            <th class="px-6 py-4 text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="data-table-body" class="divide-y divide-slate-100 text-sm font-medium text-slate-700">
+                        <tr>
+                            <td class="px-6 py-4"><span class="bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-md text-xs font-semibold">Tesseract OCR</span></td>
+                            <td class="px-6 py-4"><a href="#" class="text-indigo-600 hover:underline font-semibold open-file-mock" data-filename="invoice_2024_01.pdf"><i class="fa-regular fa-file-pdf mr-1.5"></i>invoice_2024_01.pdf</a></td>
+                            <td class="px-6 py-4"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700"><span class="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5"></span>Success</span></td>
+                            <td class="px-6 py-4 text-right space-x-2">
+                                <button class="btn-detail text-slate-400 hover:text-indigo-600 p-1"><i class="fa-regular fa-eye text-base"></i></button>
+                                <button class="btn-delete text-slate-400 hover:text-rose-600 p-1"><i class="fa-regular fa-trash-can text-base"></i></button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
