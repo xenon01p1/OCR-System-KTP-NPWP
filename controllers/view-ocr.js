@@ -1,6 +1,6 @@
 // Place this file in your frontend controllers/ folder and load it after jQuery/SweetAlert.
 // API base assumes Flask runs on http://127.0.0.1:8088.
-const OCR_API_BASE = 'http://127.0.0.1:8060/api';
+const OCR_API_BASE = 'http://127.0.0.1:8088/api';
 
 function bindOcrPageEvents() {
     const $form = $('#ocr-upload-form');
@@ -110,8 +110,8 @@ function loadOcrFiles() {
         }
 
         rows.forEach(row => {
-            const engine = row.ocr_engine || 'hybrid-field-merge';
-            const fileUrl = `http://127.0.0.1:8060/${row.filepath}`;
+            const engine = row.ocr_library || row.ocr_engine || 'hybrid-field-merge';
+            const fileUrl = `http://127.0.0.1:8088/${row.filepath}`;
             const payload = row.json_payload || {};
             const score = payload.score || 0;
             const accuracy = score ? Math.min(score * 10, 100) : 0;

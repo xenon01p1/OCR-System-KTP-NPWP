@@ -1,0 +1,8 @@
+mysql-connector-python
+pytesseract
+opencv-python
+pillow
+numpy
+python-dotenv
+pdf2image
+rapidfuzz
