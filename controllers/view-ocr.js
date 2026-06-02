@@ -7,7 +7,12 @@
     const LIST_URL = 'controllers/ocr-list.php';
 
     const PAGE_SIZE = 50;
-    const SCORE_MAX = 14;
+    const DEFAULT_SCORE_MAX = 14;
+
+    const DOCUMENT_SCORE_MAX = {
+        KTP: 14,
+        NPWP: 9
+    };
     const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
     const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'pdf'];
 
@@ -505,25 +510,21 @@
             return '<span class="text-xs text-rose-600 font-semibold">Failed</span>';
         }
 
-        const score = Number(row.score);
+        const scoreInfo = getScoreInfo(row);
 
-        if (!Number.isFinite(score)) {
+        if (scoreInfo.score === null || scoreInfo.percent === null) {
             return '<span class="text-xs text-slate-400">No score</span>';
         }
-
-        const safeScore = Math.max(0, Math.min(SCORE_MAX, score));
-        const safePercent = Math.max(0, Math.min(100, (safeScore / SCORE_MAX) * 100));
-        const percentText = safePercent.toFixed(2);
 
         return `
             <div class="w-36">
                 <div class="flex items-center justify-between mb-1">
-                    <span class="font-semibold text-slate-900 text-xs">${percentText}%</span>
-                    <span class="text-xs text-slate-400">${safeScore} / ${SCORE_MAX}</span>
+                    <span class="font-semibold text-slate-900 text-xs">${scoreInfo.percentText}%</span>
+                    <span class="text-xs text-slate-400">${scoreInfo.score} / ${scoreInfo.scoreMax}</span>
                 </div>
 
                 <div class="w-full bg-slate-100 rounded-full h-1.5">
-                    <div class="bg-indigo-600 h-1.5 rounded-full" style="width: ${percentText}%"></div>
+                    <div class="bg-indigo-600 h-1.5 rounded-full" style="width: ${scoreInfo.percentText}%"></div>
                 </div>
             </div>
         `;
@@ -569,14 +570,11 @@
     }
 
     function showDetailModal(row) {
-        const payload = row.json_payload || {};
+        const payload = getPayload(row);
         const fields = payload.fields || {};
         const rawText = payload.raw_text || '';
-        const reviewReasons = payload.review_reasons || [];
-
-        const score = Number(row.score);
-        const safeScore = Number.isFinite(score) ? Math.max(0, Math.min(SCORE_MAX, score)) : null;
-        const accuracyPercent = safeScore === null ? '-' : ((safeScore / SCORE_MAX) * 100).toFixed(2);
+        const reviewReasons = Array.isArray(payload.review_reasons) ? payload.review_reasons : [];
+        const scoreInfo = getScoreInfo(row);
 
         let fieldRows = '';
 
@@ -620,8 +618,8 @@
                         <div><b>Status:</b> ${escapeHtml(row.status || '-')}</div>
                         <div><b>Library:</b> ${escapeHtml(row.ocr_library || '-')}</div>
                         <div><b>Document:</b> ${escapeHtml(row.document_type || '-')}</div>
-                        <div><b>Score:</b> ${escapeHtml(safeScore ?? '-')} / ${SCORE_MAX}</div>
-                        <div><b>Accuracy:</b> ${escapeHtml(accuracyPercent)}%</div>
+                        <div><b>Score:</b> ${escapeHtml(scoreInfo.score ?? '-')} / ${escapeHtml(scoreInfo.scoreMax || '-')}</div>
+                        <div><b>Accuracy:</b> ${escapeHtml(scoreInfo.percentText || '-')}%</div>
                     </div>
 
                     ${reviewHtml}
@@ -643,6 +641,93 @@
             `,
             confirmButtonColor: '#4f46e5'
         });
+    }
+
+    function getScoreInfo(row) {
+        const payload = getPayload(row);
+        const documentType = String(row.document_type || payload.document_type || 'UNKNOWN').toUpperCase();
+
+        const rawScore = firstFiniteNumber(row.score, payload.score);
+
+        let scoreMax = firstFiniteNumber(
+            row.score_max,
+            row.scoreMax,
+            payload.score_max,
+            payload.scoreMax,
+            DOCUMENT_SCORE_MAX[documentType],
+            DEFAULT_SCORE_MAX
+        );
+
+        if (!Number.isFinite(scoreMax) || scoreMax <= 0) {
+            scoreMax = DEFAULT_SCORE_MAX;
+        }
+
+        if (!Number.isFinite(rawScore)) {
+            return {
+                score: null,
+                scoreMax: scoreMax,
+                percent: null,
+                percentText: null
+            };
+        }
+
+        const safeScore = Math.max(0, Math.min(scoreMax, rawScore));
+
+        let percent = firstFiniteNumber(
+            row.score_percent,
+            row.scorePercent,
+            payload.score_percent,
+            payload.scorePercent
+        );
+
+        if (!Number.isFinite(percent)) {
+            percent = (safeScore / scoreMax) * 100;
+        }
+
+        percent = Math.max(0, Math.min(100, percent));
+
+        return {
+            score: formatScoreNumber(safeScore),
+            scoreMax: formatScoreNumber(scoreMax),
+            percent: percent,
+            percentText: percent.toFixed(2)
+        };
+    }
+
+    function getPayload(row) {
+        if (!row || !row.json_payload) return {};
+
+        if (typeof row.json_payload === 'object') {
+            return row.json_payload;
+        }
+
+        if (typeof row.json_payload === 'string') {
+            try {
+                return JSON.parse(row.json_payload);
+            } catch (e) {
+                return {};
+            }
+        }
+
+        return {};
+    }
+
+    function firstFiniteNumber() {
+        for (let i = 0; i < arguments.length; i++) {
+            const value = Number(arguments[i]);
+
+            if (Number.isFinite(value)) {
+                return value;
+            }
+        }
+
+        return NaN;
+    }
+
+    function formatScoreNumber(value) {
+        if (!Number.isFinite(value)) return value;
+
+        return Number.isInteger(value) ? value : Number(value.toFixed(2));
     }
 
     function updateSummary(meta) {
