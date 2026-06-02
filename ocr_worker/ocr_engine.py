@@ -83,6 +83,14 @@ NPWP_FIELD_ORDER = [
     "penerbit",
 ]
 
+ALL_LABELS = [
+    "NIK", "NAMA", "NAME", "TEMPAT", "TGL", "LAHIR", "JENIS", "GOL", "DARAH",
+    "ALAMAT", "RT", "RW", "KEL", "DESA", "KELURAHAN", "KECAMATAN", "AGAMA",
+    "STATUS", "PERKAWINAN", "PEKERJAAN", "KEWARGANEGARAAN", "BERLAKU", "HINGGA",
+    "NPWP", "NPWP15", "NPWP16", "WAJIB", "PAJAK", "KPP", "PRATAMA", "TERDAFTAR",
+    "KANTOR", "PELAYANAN", "KABUPATEN", "PROVINSI", "PENERBIT",
+]
+
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
@@ -177,8 +185,8 @@ def remove_embedded_labels(value: str | None) -> str | None:
         r"\bGOL\.?\s*DARAH\b", r"\bALAMAT\b", r"\bRT\s*/?\s*RW\b",
         r"\bKEL\s*/?\s*DESA\b", r"\bKELURAHAN\b", r"\bKECAMATAN\b",
         r"\bAGAMA\b", r"\bSTATUS\b", r"\bPEKERJAAN\b", r"\bKEWARGANEGARAAN\b",
-        r"\bBERLAKU\b", r"\bNPWP\b", r"\bNPWP\s*15\b", r"\bNPWP\s*16\b", r"\bWAJIB\s*PAJAK\b",
-        r"\bKPP\b", r"\bTERDAFTAR\b", r"\bPENERBIT\b", r"\bKANTOR\b",
+        r"\bBERLAKU\b", r"\bNPWP\b", r"\bNPWP\s*16\b", r"\bWAJIB\s*PAJAK\b",
+        r"\bKPP\b", r"\bTERDAFTAR\b", r"\bPENERBIT\b",
     ]
     cut = len(value)
     for pattern in stop_patterns:
@@ -193,7 +201,7 @@ def clean_person_name(value: str | None) -> str | None:
     if not value:
         return None
     value = re.sub(r"[^A-Z\s.'-]", " ", value)
-    value = re.sub(r"\b(NIK|NAMA|NAME|ALAMAT|TEMPAT|TGL|LAHIR|PROVINSI|KABUPATEN|NPWP|NPWP15|NPWP16|PAJAK|WAJIB|WAJIBPAJAK|DIGIT)\b", " ", value)
+    value = re.sub(r"\b(NIK|NAMA|NAME|ALAMAT|TEMPAT|TGL|LAHIR|PROVINSI|KABUPATEN|NPWP|PAJAK|WAJIB)\b", " ", value)
     value = re.sub(r"\s+", " ", value).strip()
     return value if len(value) >= 3 else None
 
@@ -210,7 +218,7 @@ def find_labeled_value(text: str, label_patterns: list[str]) -> str | None:
     for line in lines:
         upper = normalize_line(line).upper()
         for label_pattern in label_patterns:
-            pattern = rf"\b(?:{label_pattern})\b\s*[:.\-_/\\ ]*\s*(.+?)\s*$"
+            pattern = rf"^\s*(?:{label_pattern})\s*[:.\-_/\\ ]*\s*(.+?)\s*$"
             match = re.search(pattern, upper, flags=re.IGNORECASE)
             if match:
                 value = normalize_value(match.group(1))
@@ -223,18 +231,28 @@ def find_labeled_value(text: str, label_patterns: list[str]) -> str | None:
         r"NPWP\s*15", r"NPWP\s*\(?\s*16", r"NPWP16", r"NAMA\s+WAJIB\s+PAJAK",
         r"NAMA", r"ALAMAT", r"KELURAHAN\s*/\s*KECAMATAN", r"KEL\s*/\s*KEC",
         r"KABUPATEN\s*&\s*PROVINSI", r"KABUPATEN\s+DAN\s+PROVINSI", r"TANGGAL\s+TERDAFTAR",
-        r"TERDAFTAR", r"PENERBIT", r"DIREKTORAT\s+JENDERAL\s+PAJAK", r"WAJIB\s+PAJAK",
+        r"TERDAFTAR", r"PENERBIT", r"DIREKTORAT\s+JENDERAL\s+PAJAK",
     ]
     stop = "|".join(terminators)
 
     for label_pattern in label_patterns:
-        pattern = rf"(?:{label_pattern})\s*(?:\([^)]*\))?\s*[:.\-_/\\ ]+\s*(.*?)(?=\s+(?:{stop})\b|$)"
+        pattern = rf"(?:{label_pattern})\s*(?:\([^)]*\))?\s*[:.\-_/\\ ]+\s*(.*?)(?=\s+(?:{stop})\s*(?:\([^)]*\))?\s*[:.\-_/\\ ]+|$)"
         match = re.search(pattern, flat, flags=re.IGNORECASE)
         if match:
             value = normalize_value(match.group(1))
             if value:
                 return value
 
+    return None
+
+
+def find_regex_value(text: str, patterns: list[str]) -> str | None:
+    for pattern in patterns:
+        match = re.search(pattern, text, flags=re.IGNORECASE | re.DOTALL)
+        if match:
+            value = normalize_value(match.group(1))
+            if value:
+                return value
     return None
 
 
@@ -254,7 +272,7 @@ def get_ktp_nik(text: str) -> str | None:
         digits = re.sub(r"\D", "", repair_digit_text(match.group(1)))
         if len(digits) >= 16:
             return digits[:16]
-    match = re.search(r"\b\d{16}\b", text)
+    match = re.search(r"\b\d{16}\b", repair_digit_text(text))
     return match.group(0) if match else None
 
 
@@ -287,7 +305,6 @@ def get_npwp16(text: str) -> str | None:
         r"NPWP\s*16\s*(?:\([^)]*\))?[^0-9A-Za-z]{0,20}([0-9OIl|! ]{16,30})",
         r"NPWP16\s*(?:\([^)]*\))?[^0-9A-Za-z]{0,20}([0-9OIl|! ]{16,30})",
         r"\bNIK\b[^0-9A-Za-z]{0,20}([0-9OIl|! ]{16,30})",
-        r"(?:16\s*DIGIT\s*.*?|NIK\s*.*?)\b([0-9OIl|! ]{16,25})\b",
     ]
     for pattern in patterns:
         match = re.search(pattern, repaired, flags=re.IGNORECASE)
@@ -296,12 +313,6 @@ def get_npwp16(text: str) -> str | None:
         digits = re.sub(r"\D", "", repair_digit_text(match.group(1)))
         if len(digits) >= 16:
             return digits[:16]
-            
-    if "NPWP" in repaired.upper() or "PAJAK" in repaired.upper():
-        cleaned_nums = re.findall(r"\b\d{16}\b", re.sub(r"[^\d\s]", " ", repaired))
-        if cleaned_nums:
-            return cleaned_nums[0]
-            
     return None
 
 
@@ -424,59 +435,54 @@ def normalize_valid_until(value: str | None) -> str | None:
     if not value:
         return None
     key = alpha_key(value)
-    if "SEUMURHIDUP" in key or fuzz.partial_ratio("SEUMURHIDUP", key) >= 74:
+    if "SEUMURHIDUP" in key or "SEUMUR" in key or fuzz.partial_ratio("SEUMURHIDUP", key) >= 74:
         return "SEUMUR HIDUP"
     return extract_date(value)
 
 
 def extract_rt_rw(text: str) -> str | None:
+    repaired = repair_digit_text(text)
     patterns = [
-        r"(?:RT\s*/\s*RW|RT\s*RW|RTRW|RTEW|RREW)[\s:;=._\-]*([0-9OIl|!]{1,3})\s*/\s*([0-9OIl|!]{1,3})",
-        r"\b([0-9OIl|!]{1,3})\s*/\s*([0-9OIl|!]{1,3})\b",
+        r"(?:RT\s*/\s*RW|RT\s*RW|RTRW|RTEW|RREW)[\s:;=._\-]*([0-9]{1,3})\s*/\s*([0-9]{1,3})",
+        r"\b([0-9]{2,3})\s*/\s*([0-9]{2,3})\b",
     ]
     for pattern in patterns:
-        match = re.search(pattern, text, flags=re.IGNORECASE)
+        match = re.search(pattern, repaired, flags=re.IGNORECASE)
         if not match:
             continue
-        left = re.sub(r"\D", "", repair_digit_text(match.group(1)))
-        right = re.sub(r"\D", "", repair_digit_text(match.group(2)))
+        left = re.sub(r"\D", "", match.group(1))
+        right = re.sub(r"\D", "", match.group(2))
         if left and right:
             return f"{int(left):03d}/{int(right):03d}"
     return None
 
 
-def extract_ktp_fields(text: str) -> dict[str, Any]:
+def extract_ktp_fields(text: str, is_snippet_engine: bool = False) -> dict[str, Any]:
     raw = clean_text(text)
+    lines = [normalize_line(l) for l in text.splitlines() if normalize_line(l)]
 
     nik = get_ktp_nik(raw)
-    nama = clean_person_name(find_labeled_value(raw, [r"NAMA", r"NAME"]))
-
-    ttl = find_labeled_value(raw, [
-        r"TEMPAT\s*/?\s*TGL\.?\s*LAHIR", r"TEMPAT\s*TGL\.?\s*LAHIR",
-        r"TEMPATI?\s*TG[LI!1]?\s*LAHIR", r"TEMPAT.*LAHIR",
-    ])
-    tempat_lahir, tanggal_lahir = split_birth_place_date(ttl)
-
-    jenis_kelamin = normalize_gender(find_labeled_value(raw, [r"JENIS\s*KELAMIN"]))
-
-    golongan_darah = None
-    gol_match = re.search(r"GOL\.?\s*DARAH\s*[:.\-]?\s*(AB|A|B|O|-)", raw, flags=re.IGNORECASE)
-    if gol_match:
-        golongan_darah = normalize_blood_type(gol_match.group(1))
-
-    alamat = clean_words(remove_embedded_labels(find_labeled_value(raw, [r"ALAMAT", r"ALAMA"])), min_len=5)
     rt_rw = extract_rt_rw(raw)
-    kel_desa = clean_words(remove_embedded_labels(find_labeled_value(raw, [r"KEL\s*/?\s*DESA", r"KELURAHAN", r"DESA"])))
-    kecamatan = clean_words(remove_embedded_labels(find_labeled_value(raw, [r"KECAMATAN", r"MECAMATAN"])))
-    agama = normalize_religion(find_labeled_value(raw, [r"AGAMA"]))
-    status_perkawinan = normalize_marital(find_labeled_value(raw, [r"STATUS\s*PERKAWINAN", r"STATUS"]))
-    pekerjaan = clean_words(remove_embedded_labels(find_labeled_value(raw, [r"PEKERJAAN"])))
 
-    kewarganegaraan_raw = find_labeled_value(raw, [r"KEWARGANEGARAAN", r"KEWARGA\s*NEGARAAN"])
-    source = f"{kewarganegaraan_raw or ''} {raw}".upper()
-    kewarganegaraan = "WNI" if "WNI" in source else ("WNA" if "WNA" in source else None)
+    # Parsing global global semantik untuk data bernilai pasti
+    agama = None
+    for item in ["ISLAM", "KRISTEN", "KATOLIK", "HINDU", "BUDDHA", "KONGHUCU"]:
+        if item in raw.upper():
+            agama = item
+            break
 
-    berlaku_hingga = normalize_valid_until(find_labeled_value(raw, [r"BERLAKU\s*HINGGA", r"BERLAKU"]))
+    status_perkawinan = None
+    if "BELUM KAWIN" in raw.upper() or "BELUMKAWIN" in raw.upper():
+        status_perkawinan = "BELUM KAWIN"
+    elif "KAWIN" in raw.upper():
+        status_perkawinan = "KAWIN"
+    elif "CERAI HIDUP" in raw.upper() or "CERAIHIDUP" in raw.upper():
+        status_perkawinan = "CERAI HIDUP"
+    elif "CERAI MATI" in raw.upper() or "CERAIMATI" in raw.upper():
+        status_perkawinan = "CERAI MATI"
+
+    kewarganegaraan = "WNI" if "WNI" in raw.upper() else ("WNA" if "WNA" in raw.upper() else None)
+    berlaku_hingga = "SEUMUR HIDUP" if "SEUMUR" in raw.upper() else None
 
     all_dates = []
     for match in re.finditer(r"\b\d{1,2}[-/.]\s*\d{1,2}[-/.]\s*\d{4}\b", repair_digit_text(raw)):
@@ -484,8 +490,94 @@ def extract_ktp_fields(text: str) -> dict[str, Any]:
         if d:
             all_dates.append(d)
 
-    if not tanggal_lahir and all_dates:
+    tempat_lahir = None
+    tanggal_lahir = None
+
+    for idx, line in enumerate(lines):
+        if any(fuzz.partial_ratio(w, alpha_key(line)) >= 85 for w in ["TEMPAT", "LAHIR", "TEMPAL"]):
+            for offset in [-1, 1, -2, 2]:
+                if 0 <= idx + offset < len(lines):
+                    cand = lines[idx + offset]
+                    if len(cand) >= 3 and not any(k in cand.upper() for k in ["TEMPAT", "LAHIR", "NIK", "PROVINSI", "KABUPATEN"]):
+                        if not extract_date(cand):
+                            tempat_lahir = re.sub(r"[^A-Z\s]", "", cand.upper()).strip()
+                            break
+            if tempat_lahir:
+                break
+
+    if all_dates:
         tanggal_lahir = all_dates[0]
+        if len(all_dates) >= 2 and not berlaku_hingga:
+            berlaku_hingga = all_dates[-1]
+
+    # STRATEGI ADAPTIF BERDASARKAN OCR ENGINE
+    if is_snippet_engine:
+        nama = None
+        alamat = None
+        kel_desa = None
+        kecamatan = None
+        pekerjaan = None
+        jenis_kelamin = "LAKI-LAKI" if "LAKI" in raw.upper() else ("PEREMPUAN" if "PEREMPUAN" in raw.upper() else None)
+
+        golongan_darah = None
+        gol_match = re.search(r"\b(AB|A|B|O)\b", raw.upper())
+        if gol_match:
+            golongan_darah = gol_match.group(1)
+
+        # Proximity scanning berdasarkan kedekatan relasi indeks baris snippet
+        for i, line in enumerate(lines):
+            up = line.upper()
+
+            if "NIK" in up and i + 1 < len(lines) and not nama:
+                cand = lines[i + 1]
+                if not any(k in cand.upper() for k in ["NIK", "NAMA", "LAHIR", "PROVINSI", "KABUPATEN"]):
+                    nama = clean_person_name(cand)
+            if "NAMA" in up and i - 1 >= 0 and not nama:
+                nama = clean_person_name(lines[i - 1])
+
+            if "ALAMAT" in up and i - 1 >= 0 and not alamat:
+                alamat = clean_words(lines[i - 1], min_len=5)
+            if any(w in up for w in ["DUSUN", "KAMPUNG", "JL", "JALAN"]) and not alamat:
+                alamat = clean_words(line, min_len=4)
+
+            if any(w in up for w in ["KEL", "DESA", "KELDESA"]) and i - 1 >= 0:
+                kel_desa = clean_words(lines[i - 1])
+            if "KECAMATAN" in up and i - 1 >= 0:
+                kecamatan = clean_words(lines[i - 1])
+            if any(w in up for w in ["PEKERJAAN", "PEKORJAAN"]) and i - 1 >= 0:
+                pekerjaan = clean_words(lines[i - 1])
+
+        if not nama and len(lines) > 3:
+            for l in lines[2:5]:
+                if len(l) > 4 and not any(k in l.upper() for k in ["NIK", "PROVINSI", "KABUPATEN", "LAHIR"]):
+                    nama = clean_person_name(l)
+                    break
+    else:
+        # STRATEGI STANDAR UNTUK TESSERACT (Line-Colon Regex Matching)
+        nama = clean_person_name(find_labeled_value(raw, [r"NAMA", r"NAME"]))
+        jenis_kelamin = normalize_gender(find_labeled_value(raw, [r"JENIS\s*KELAMIN"]))
+
+        golongan_darah = None
+        gol_match = re.search(r"GOL\.?\s*DARAH\s*[:.\-]?\s*(AB|A|B|O|-)", raw, flags=re.IGNORECASE)
+        if gol_match:
+            golongan_darah = normalize_blood_type(gol_match.group(1))
+
+        alamat = clean_words(remove_embedded_labels(find_labeled_value(raw, [r"ALAMAT", r"ALAMA"])), min_len=5)
+        kel_desa = clean_words(remove_embedded_labels(find_labeled_value(raw, [r"KEL\s*/?\s*DESA", r"KELURAHAN", r"DESA"])))
+        kecamatan = clean_words(remove_embedded_labels(find_labeled_value(raw, [r"KECAMATAN", r"MECAMATAN"])))
+        pekerjaan = clean_words(remove_embedded_labels(find_labeled_value(raw, [r"PEKERJAAN"])))
+
+        ttl = find_labeled_value(raw, [
+            r"TEMPAT\s*/?\s*TGL\.?\s*LAHIR", r"TEMPAT\s*TGL\.?\s*LAHIR",
+            r"TEMPATI?\s*TG[LI!1]?\s*LAHIR", r"TEMPAT.*LAHIR",
+        ])
+        t_lhr, d_lhr = split_birth_place_date(ttl)
+        if t_lhr:
+            tempat_lahir = t_lhr
+        if d_lhr:
+            tanggal_lahir = d_lhr
+
+        berlaku_hingga = normalize_valid_until(find_labeled_value(raw, [r"BERLAKU\s*HINGGA", r"BERLAKU"]))
 
     tanggal_penerbitan = all_dates[-1] if len(all_dates) >= 2 else None
 
@@ -501,7 +593,7 @@ def extract_ktp_fields(text: str) -> dict[str, Any]:
         "tempat_lahir": tempat_lahir,
         "jenis_kelamin": jenis_kelamin,
         "tanggal_lahir": tanggal_lahir,
-        "berlaku_hingga": berlaku_hingga,
+        "berlaku_hingga": berlaku_hingga or "SEUMUR HIDUP",
         "golongan_darah": golongan_darah,
         "kewarganegaraan": kewarganegaraan,
         "status_perkawinan": status_perkawinan,
@@ -535,13 +627,8 @@ def extract_npwp_fields(text: str) -> dict[str, Any]:
 
     nama = clean_person_name(find_labeled_value(raw, [r"NAMA\s+WAJIB\s+PAJAK", r"WAJIB\s+PAJAK", r"NAMA"]))
     alamat = clean_words(remove_embedded_labels(find_labeled_value(raw, [r"ALAMAT"])), min_len=6)
-    
-    kel_kec = find_labeled_value(raw, [r"KELURAHAN\s*/\s*KECAMATAN", r"KEL\s*/\s*KEC", r"KELURAHAN", r"KECAMATAN"])
-    kel_kec = clean_words(remove_embedded_labels(kel_kec), min_len=3)
-    
-    kab_prov = find_labeled_value(raw, [r"KABUPATEN\s*&\s*PROVINSI", r"KABUPATEN\s+DAN\s+PROVINSI", r"KAB\.?\s*&\s*PROV", r"KABUPATEN", r"PROVINSI"])
-    kab_prov = clean_words(remove_embedded_labels(kab_prov), min_len=3)
-    
+    kel_kec = clean_words(remove_embedded_labels(find_labeled_value(raw, [r"KELURAHAN\s*/\s*KECAMATAN", r"KEL\s*/\s*KEC", r"KELURAHAN", r"KECAMATAN"])), min_len=3)
+    kab_prov = clean_words(remove_embedded_labels(find_labeled_value(raw, [r"KABUPATEN\s*&\s*PROVINSI", r"KABUPATEN\s+DAN\s+PROVINSI", r"KAB\.?\s*&\s*PROV", r"KABUPATEN", r"PROVINSI"])), min_len=3)
     terdaftar_raw = find_labeled_value(raw, [r"TANGGAL\s+TERDAFTAR", r"TERDAFTAR"])
     tanggal_terdaftar = extract_date(terdaftar_raw) or extract_date(raw)
     penerbit = normalize_penerbit(find_labeled_value(raw, [r"PENERBIT", r"DIREKTORAT\s+JENDERAL\s+PAJAK", r"DJP"]), raw)
@@ -580,7 +667,7 @@ def extract_npwp_fields(text: str) -> dict[str, Any]:
 
 
 # ============================================================
-# Scoring and payload validation logic
+# Scoring and payload
 # ============================================================
 
 def order_fields(fields: dict[str, Any], order: list[str]) -> dict[str, Any]:
@@ -713,7 +800,7 @@ def review_reasons(document_type: str, fields: dict[str, Any], score: int) -> li
 def extraction_quality_score(text: str) -> int:
     doc_type = detect_document_type(text)
     if doc_type == "KTP":
-        fields = extract_ktp_fields(text)
+        fields = extract_ktp_fields(text, is_snippet_engine=False)
     elif doc_type == "NPWP":
         fields = extract_npwp_fields(text)
     else:
@@ -788,7 +875,7 @@ def error_payload(engine_name: str, error: Exception) -> dict[str, Any]:
 
 
 # ============================================================
-# Core File Readers & Engine Parsers
+# Image and OCR
 # ============================================================
 
 def file_to_images(file_path: str) -> list[tuple[str, np.ndarray]]:
@@ -837,6 +924,20 @@ def preprocess_variants(image: np.ndarray) -> list[tuple[str, np.ndarray]]:
             ("upscale-2x-sharpen", sharpen_image(up2)),
         ]
 
+    if OCR_SPEED_MODE == "accurate":
+        variants: list[tuple[str, np.ndarray]] = [("gray", gray)]
+        for scale in [2, 3]:
+            up = cv2.resize(gray, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+            variants.append((f"upscale-{scale}x", up))
+            variants.append((f"upscale-{scale}x-sharpen", sharpen_image(up)))
+            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+            variants.append((f"upscale-{scale}x-clahe", clahe.apply(up)))
+
+        up3 = cv2.resize(gray, None, fx=3, fy=3, interpolation=cv2.INTER_CUBIC)
+        denoise = cv2.fastNlMeansDenoising(up3, None, 7, 7, 21)
+        variants.append(("upscale-3x-denoise-sharpen", sharpen_image(denoise)))
+        return variants
+
     up2 = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
     up3 = cv2.resize(gray, None, fx=3, fy=3, interpolation=cv2.INTER_CUBIC)
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
@@ -857,7 +958,14 @@ def tesseract_text(image: np.ndarray, config: str) -> str:
 def tesseract_candidate(file_path: str, engine_name: str, use_variants: bool) -> dict[str, Any]:
     images = file_to_images(file_path)
     all_text = []
-    configs = ["--oem 3 --psm 6"] if OCR_SPEED_MODE == "fast" else ["--oem 3 --psm 6", "--oem 3 --psm 11"]
+
+    if OCR_SPEED_MODE == "fast":
+        configs = ["--oem 3 --psm 6"]
+    else:
+        configs = [
+            "--oem 3 --psm 6",
+            "--oem 3 --psm 11",
+        ]
 
     for page_label, image in images:
         variants = preprocess_variants(image) if use_variants else [("original", image)]
@@ -875,7 +983,7 @@ def tesseract_candidate(file_path: str, engine_name: str, use_variants: bool) ->
 
                 doc_type = detect_document_type(cleaned)
                 if doc_type in ["KTP", "NPWP"]:
-                    fields = extract_ktp_fields(cleaned) if doc_type == "KTP" else extract_npwp_fields(cleaned)
+                    fields = extract_ktp_fields(cleaned, is_snippet_engine=False) if doc_type == "KTP" else extract_npwp_fields(cleaned)
                     score = calculate_score(doc_type, fields)
                     if score >= get_max_score(doc_type):
                         best_page_text = cleaned
@@ -888,12 +996,60 @@ def tesseract_candidate(file_path: str, engine_name: str, use_variants: bool) ->
 
     raw_text = clean_text("\n".join(all_text))
     document_type = detect_document_type(raw_text)
-    fields = extract_ktp_fields(raw_text) if document_type == "KTP" else (extract_npwp_fields(raw_text) if document_type == "NPWP" else {})
+
+    if document_type == "KTP":
+        fields = extract_ktp_fields(raw_text, is_snippet_engine=False)
+    elif document_type == "NPWP":
+        fields = extract_npwp_fields(raw_text)
+    else:
+        fields = {}
 
     return {
         "ocr_enabled": True,
         "ocr_status": "success",
         "ocr_engine": engine_name,
+        "ocr_provider": "self-hosted-free",
+        "document_type": document_type,
+        "extracted_at": now_iso(),
+        "fields": fields,
+        "raw_text": raw_text,
+        "score": calculate_score(document_type, fields),
+    }
+
+
+def easyocr_candidate(file_path: str) -> dict[str, Any]:
+    try:
+        import easyocr
+    except Exception as exc:
+        raise RuntimeError(f"EasyOCR is not installed or failed to load: {exc}")
+
+    reader = easyocr.Reader(["id", "en"], gpu=False, verbose=False)
+    images = file_to_images(file_path)
+    all_lines = []
+
+    for page_label, image in images:
+        all_lines.append(f"--- {page_label} ---")
+        results = reader.readtext(image, detail=1)
+        # Urutkan koordinat bboxes secara spasial: Atas ke Bawah, Kiri ke Kanan
+        results.sort(key=lambda x: (x[0][0][1], x[0][0][0]))
+        for bbox, text, confidence in results:
+            if confidence >= 0.15:
+                all_lines.append(str(text))
+
+    raw_text = clean_text("\n".join(all_lines))
+    document_type = detect_document_type(raw_text)
+
+    if document_type == "KTP":
+        fields = extract_ktp_fields(raw_text, is_snippet_engine=True)
+    elif document_type == "NPWP":
+        fields = extract_npwp_fields(raw_text)
+    else:
+        fields = {}
+
+    return {
+        "ocr_enabled": True,
+        "ocr_status": "success",
+        "ocr_engine": "easyocr-local-api",
         "ocr_provider": "self-hosted-free",
         "document_type": document_type,
         "extracted_at": now_iso(),
@@ -921,19 +1077,33 @@ def paddleocr_candidate(file_path: str) -> dict[str, Any]:
             result = ocr.ocr(temp_path, cls=True)
             all_lines.append(f"--- {page_label} ---")
 
+            snippets = []
             for block in result or []:
                 for item in block or []:
                     try:
+                        top_y = item[0][0][1]
+                        left_x = item[0][0][0]
                         text = item[1][0]
                         conf = float(item[1][1])
+                        snippets.append((top_y, left_x, text, conf))
                     except Exception:
                         continue
-                    all_lines.append(str(text))
-                    confidences.append(conf)
+
+            # Urutkan secara spasial top-to-bottom agar tidak zigzag/acak saat parsing
+            snippets.sort(key=lambda x: (x[0], x[1]))
+            for s in snippets:
+                all_lines.append(str(s[2]))
+                confidences.append(s[3])
 
     raw_text = clean_text("\n".join(all_lines))
     document_type = detect_document_type(raw_text)
-    fields = extract_ktp_fields(raw_text) if document_type == "KTP" else (extract_npwp_fields(raw_text) if document_type == "NPWP" else {})
+
+    if document_type == "KTP":
+        fields = extract_ktp_fields(raw_text, is_snippet_engine=True)
+    elif document_type == "NPWP":
+        fields = extract_npwp_fields(raw_text)
+    else:
+        fields = {}
 
     return {
         "ocr_enabled": True,
@@ -942,47 +1112,6 @@ def paddleocr_candidate(file_path: str) -> dict[str, Any]:
         "ocr_provider": "self-hosted-free",
         "document_type": document_type,
         "confidence_avg": round(sum(confidences) / len(confidences), 4) if confidences else None,
-        "extracted_at": now_iso(),
-        "fields": fields,
-        "raw_text": raw_text,
-        "score": calculate_score(document_type, fields),
-    }
-
-
-def easyocr_candidate(file_path: str) -> dict[str, Any]:
-    try:
-        import easyocr
-    except Exception as exc:
-        raise RuntimeError(f"EasyOCR is not installed or failed to load: {exc}")
-
-    # Set gpu=True here if your machine has an active CUDA setup
-    reader = easyocr.Reader(["id", "en"], gpu=False, verbose=False)
-    images = file_to_images(file_path)
-    all_lines = []
-
-    for page_label, image in images:
-        all_lines.append(f"--- {page_label} ---")
-        
-        # Read text along with positional data bounding boxes
-        results = reader.readtext(image, detail=1)
-        
-        # Sort snippets structurally by top coordinates, then left coordinates
-        results.sort(key=lambda x: (x[0][0][1], x[0][0][0]))
-        
-        for bbox, text, confidence in results:
-            if confidence >= 0.20:  # Low confidence cutoff helps salvage blurred texts
-                all_lines.append(str(text))
-
-    raw_text = clean_text("\n".join(all_lines))
-    document_type = detect_document_type(raw_text)
-    fields = extract_ktp_fields(raw_text) if document_type == "KTP" else (extract_npwp_fields(raw_text) if document_type == "NPWP" else {})
-
-    return {
-        "ocr_enabled": True,
-        "ocr_status": "success",
-        "ocr_engine": "easyocr-local-api",
-        "ocr_provider": "self-hosted-free",
-        "document_type": document_type,
         "extracted_at": now_iso(),
         "fields": fields,
         "raw_text": raw_text,
@@ -1008,21 +1137,23 @@ def run_ocr(file_path: str, library: str) -> dict[str, Any]:
                     candidates.append(tesseract_candidate(file_path, engine_name, use_variants))
                 except Exception as exc:
                     candidates.append(error_payload(engine_name, exc))
-            for loader_fn, name in [(paddleocr_candidate, "paddleocr-local-api"), (easyocr_candidate, "easyocr-local-api")]:
-                try:
-                    candidates.append(loader_fn(file_path))
-                except Exception as exc:
-                    candidates.append(error_payload(name, exc))
-                    
+            try:
+                candidates.append(easyocr_candidate(file_path))
+            except Exception as exc:
+                candidates.append(error_payload("easyocr-local-api", exc))
+            try:
+                candidates.append(paddleocr_candidate(file_path))
+            except Exception as exc:
+                candidates.append(error_payload("paddleocr-local-api", exc))
             payload = build_single_engine_payload(choose_best_candidate(candidates))
-            return {"document_type": payload.get("document_type", "UNKNOWN"), "payload": payload}
-
-        if "easy" in library:
-            payload = build_single_engine_payload(easyocr_candidate(file_path))
             return {"document_type": payload.get("document_type", "UNKNOWN"), "payload": payload}
 
         if "opencv" in library:
             payload = build_single_engine_payload(tesseract_candidate(file_path, "opencv-tesseract", True))
+            return {"document_type": payload.get("document_type", "UNKNOWN"), "payload": payload}
+
+        if "easy" in library:
+            payload = build_single_engine_payload(easyocr_candidate(file_path))
             return {"document_type": payload.get("document_type", "UNKNOWN"), "payload": payload}
 
         if "paddle" in library:

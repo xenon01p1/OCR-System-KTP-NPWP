@@ -31,13 +31,37 @@
 
     <script>
         $(document).ready(function() {
-            
-            // 1. INITIAL STRUCTURAL LOADS
-            $('#sidebar-container').load('components/sidebar.html');
-            $('#header-container').load('components/header.html');
-            
-            // Primary Default Route: Home View
-            loadView('home');
+
+            checkAuthAndBoot();
+
+            function checkAuthAndBoot() {
+                $.ajax({
+                    url: 'controllers/auth-check.php',
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function (response) {
+                        if (!response || response.status !== true || response.authenticated !== true) {
+                            window.location.href = 'login.html';
+                            return;
+                        }
+
+                        bootDashboard(response.data || {});
+                    },
+                    error: function () {
+                        window.location.href = 'login.html';
+                    }
+                });
+            }
+
+            function bootDashboard(admin) {
+                $('#sidebar-container').load('components/sidebar.html');
+                $('#header-container').load('components/header.html', function () {
+                    $('#admin-name-text').text(admin.name || 'Admin');
+                    $('#admin-role-text').text(admin.role || '');
+                });
+
+                loadView('home');
+            }
 
             // 2. PRIMARY VIEW ROUTER SWITCH
             function loadView(viewName) {
@@ -131,7 +155,26 @@
 
 
             $(document).on('click', '#btn-logout', function() {
-                Swal.fire({ title: 'Sign Out Confirmation', text: 'Exit secure dashboard session?', icon: 'question', showCancelButton: true, confirmButtonColor: '#4f46e5' });
+                Swal.fire({
+                    title: 'Sign Out Confirmation',
+                    text: 'Exit secure dashboard session?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#4f46e5',
+                    cancelButtonColor: '#64748b',
+                    confirmButtonText: 'Logout'
+                }).then(function(result) {
+                    if (!result.isConfirmed) return;
+
+                    $.ajax({
+                        url: 'controllers/auth-logout.php',
+                        type: 'POST',
+                        dataType: 'json',
+                        complete: function () {
+                            window.location.href = 'login.html';
+                        }
+                    });
+                });
             });
         });
     </script>

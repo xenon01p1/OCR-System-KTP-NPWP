@@ -3,6 +3,7 @@
 header('Content-Type: application/json');
 
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/auth-guard.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     http_response_code(405);

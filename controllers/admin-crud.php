@@ -3,6 +3,7 @@
 header('Content-Type: application/json');
 
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/auth-guard.php';
 
 function jsonResponse(bool $status, string $message, array $extra = [], int $code = 200): void
 {
