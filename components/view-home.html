@@ -1,30 +1,106 @@
 <div class="space-y-6">
     <div class="bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl p-8 text-white shadow-lg shadow-indigo-600/10">
-        <h2 class="text-3xl font-bold mb-2">Welcome Back!</h2>
-        <p class="text-indigo-100 max-w-xl">Upload documents, choose your preferred recognition engine, and extract text data seamlessly.</p>
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+                <h2 class="text-3xl font-bold mb-2">Welcome Back!</h2>
+                <p class="text-indigo-100 max-w-xl">
+                    Monitor uploaded OCR files, processing status, recognition result, and admin activity.
+                </p>
+            </div>
+
+            <button id="btn-refresh-home" type="button" class="bg-white/10 hover:bg-white/20 border border-white/20 px-4 py-2 rounded-xl text-sm font-semibold transition-all">
+                <i class="fa-solid fa-rotate-right mr-2"></i>
+                Refresh
+            </button>
+        </div>
     </div>
-    
+
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
             <div>
-                <p class="text-sm text-slate-400 font-medium">Total Files Processed</p>
-                <p class="text-3xl font-bold text-slate-900 mt-1">1,248</p>
+                <p class="text-sm text-slate-400 font-medium">Total Files</p>
+                <p id="home-total-files" class="text-3xl font-bold text-slate-900 mt-1">0</p>
             </div>
-            <div class="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600"><i class="fa-solid fa-file-invoice text-xl"></i></div>
+            <div class="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600">
+                <i class="fa-solid fa-file-invoice text-xl"></i>
+            </div>
         </div>
+
         <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
             <div>
                 <p class="text-sm text-slate-400 font-medium">Success Rate</p>
-                <p class="text-3xl font-bold text-emerald-600 mt-1">99.2%</p>
+                <p id="home-success-rate" class="text-3xl font-bold text-emerald-600 mt-1">0%</p>
             </div>
-            <div class="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600"><i class="fa-solid fa-circle-check text-xl"></i></div>
+            <div class="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600">
+                <i class="fa-solid fa-circle-check text-xl"></i>
+            </div>
         </div>
+
         <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
             <div>
-                <p class="text-sm text-slate-400 font-medium">Active Engine</p>
-                <p class="text-xl font-bold text-slate-900 mt-2">Tesseract v5</p>
+                <p class="text-sm text-slate-400 font-medium">Latest Engine</p>
+                <p id="home-active-engine" class="text-xl font-bold text-slate-900 mt-2">-</p>
             </div>
-            <div class="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600"><i class="fa-solid fa-bolt text-xl"></i></div>
+            <div class="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600">
+                <i class="fa-solid fa-bolt text-xl"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <p class="text-xs text-slate-400 font-semibold uppercase">Pending</p>
+            <p id="home-pending-count" class="text-2xl font-bold text-amber-600 mt-2">0</p>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <p class="text-xs text-slate-400 font-semibold uppercase">Processing</p>
+            <p id="home-processing-count" class="text-2xl font-bold text-blue-600 mt-2">0</p>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <p class="text-xs text-slate-400 font-semibold uppercase">Success</p>
+            <p id="home-success-count" class="text-2xl font-bold text-emerald-600 mt-2">0</p>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <p class="text-xs text-slate-400 font-semibold uppercase">Failed</p>
+            <p id="home-failed-count" class="text-2xl font-bold text-rose-600 mt-2">0</p>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+            <div>
+                <h3 class="text-sm font-bold text-slate-800">Latest OCR Uploads</h3>
+                <p class="text-xs text-slate-400 mt-1">Newest uploaded files from OCR queue.</p>
+            </div>
+
+            <button id="btn-go-ocr-page" type="button" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800">
+                Open OCR Page
+                <i class="fa-solid fa-arrow-right ml-1"></i>
+            </button>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead class="bg-slate-50 text-xs uppercase text-slate-400">
+                    <tr>
+                        <th class="px-6 py-3">File</th>
+                        <th class="px-6 py-3">Library</th>
+                        <th class="px-6 py-3">Document</th>
+                        <th class="px-6 py-3">Status</th>
+                        <th class="px-6 py-3">Created</th>
+                    </tr>
+                </thead>
+                <tbody id="home-latest-table-body" class="divide-y divide-slate-100">
+                    <tr>
+                        <td colspan="5" class="px-6 py-8 text-center text-sm text-slate-400">
+                            Loading dashboard data...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>

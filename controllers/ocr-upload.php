@@ -14,6 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $allowedLibraries = [
+    'EasyOCR',
     'Tesseract OCR',
     'OpenCV',
     'OpenCV Tesseract',
