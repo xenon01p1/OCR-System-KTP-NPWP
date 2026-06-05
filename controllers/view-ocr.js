@@ -20,7 +20,7 @@
         { value: 'EasyOCR', label: 'EasyOCR' },
         { value: 'Tesseract OCR', label: 'Tesseract OCR (Open Source)' },
         { value: 'OpenCV Tesseract', label: 'OpenCV Tesseract' },
-        { value: 'PaddleOCR', label: 'PaddleOCR (Multilingual)' }
+        // { value: 'PaddleOCR', label: 'PaddleOCR (Multilingual)' }
     ];
 
     let ocrRows = [];

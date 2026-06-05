@@ -1,9 +1,12 @@
 <?php
 
-$DB_HOST = '127.0.0.1';
+// $DB_HOST = '127.0.0.1';
+$DB_HOST = 'localhost';
 $DB_NAME = 'ocr_ktp_npwp';
 $DB_USER = 'root';
 $DB_PASS = '1234';
+// $DB_USER = 'gpstracker';
+// $DB_PASS = 'gpstracker123';
 
 try {
     $pdo = new PDO(
